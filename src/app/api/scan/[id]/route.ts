@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -24,12 +24,35 @@ export async function GET(
   const utmMedium = url.searchParams.get('utm_medium');
   const utmCampaign = url.searchParams.get('utm_campaign');
 
-  // Log the scan (QR code should already exist from creation)
+  // Map friendly IDs to UUIDs
+  const qrIdMapping: { [key: string]: string } = {
+    'US_Shirt_logo': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'Boston': 'b2c3d4e5-f678-90ab-cdef-123456789012',
+    'New_York': 'c3d4e5f6-7890-abcd-ef12-345678901234',
+    'US_Brochure': 'd4e5f678-90ab-cdef-1234-567890123456'
+  };
+
+  const qrUuid = qrIdMapping[id] || id; // Use mapping or assume it's already a UUID
+
+  // Create Supabase server client
+  const supabase = createSupabaseServerClient();
+
+  // Log the scan and increment counter
   try {
+    // First, increment the scan count for this QR code
+    const { error: updateError } = await supabase.rpc('increment_scan_count', {
+      qr_id: qrUuid
+    });
+
+    if (updateError) {
+      console.error('Failed to increment scan count:', updateError);
+    }
+
+    // Log the scan details
     const { error: scanError } = await supabase
       .from('scans')
       .insert({
-        qr_code_id: id,
+        qr_code_id: qrUuid,
         ip_address: ip,
         user_agent: userAgent,
         country: country,
