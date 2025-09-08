@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
     
     const { id, name } = await request.json();
-    const supabase = createSupabaseServerClient();
+    const supabase = await createClient();
     
     // First get the user's UUID from qr_emails table
     const { data: userData, error: userError } = await supabase

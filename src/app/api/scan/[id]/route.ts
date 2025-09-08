@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -35,7 +35,7 @@ export async function GET(
   const qrUuid = qrIdMapping[id] || id; // Use mapping or assume it's already a UUID
 
   // Create Supabase server client
-  const supabase = createSupabaseServerClient();
+  const supabase = await createClient();
 
   // Log the scan and increment counter
   try {
