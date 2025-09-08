@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function DELETE(request: NextRequest) {
+  const supabase = createSupabaseServerClient();
   try {
     // Check authentication
     const authEmail = request.cookies.get('auth-email');

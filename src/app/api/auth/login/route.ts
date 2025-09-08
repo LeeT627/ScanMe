@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
+    const supabase = createSupabaseServerClient();
     
     // Check if email exists in qr_emails table
     const { data: authorizedUser, error } = await supabase
