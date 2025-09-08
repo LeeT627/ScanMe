@@ -37,21 +37,22 @@ export async function GET(
   // Create Supabase server client
   const supabase = await createClient();
 
-  // Log the scan and increment counter
+  // First, fetch the QR code to get the destination URL
+  const { data: qrCode, error: fetchError } = await supabase
+    .from('qr_codes')
+    .select('destination_url')
+    .eq('id', qrUuid)
+    .single();
+
+  if (fetchError || !qrCode) {
+    console.error('QR code not found or fetch error:', fetchError);
+    return new NextResponse('QR code not found', { status: 404 });
+  }
+
+  // Log the scan and increment counter in parallel
   try {
-    // First, increment the scan count for this QR code
-    const { error: updateError } = await supabase.rpc('increment_scan_count', {
-      qr_id: qrUuid
-    });
-
-    if (updateError) {
-      console.error('Failed to increment scan count:', updateError);
-    }
-
-    // Log the scan details
-    const { error: scanError } = await supabase
-      .from('scans')
-      .insert({
+    const [scanResult, incrementResult] = await Promise.all([
+      supabase.from('scans').insert({
         qr_code_id: qrUuid,
         ip_address: ip,
         user_agent: userAgent,
@@ -62,16 +63,25 @@ export async function GET(
         referrer: referrer,
         utm_source: utmSource,
         utm_medium: utmMedium,
-        utm_campaign: utmCampaign
-      });
+        utm_campaign: utmCampaign,
+      }),
+      supabase.rpc('increment_scan_count', { qr_id: qrUuid }),
+    ]);
 
-    if (scanError) {
-      console.error('Failed to log scan:', scanError);
+    if (incrementResult.error) {
+      console.error('Failed to increment scan count:', incrementResult.error);
+      // Not returning an error to the user, as the primary action is the redirect
+    }
+
+    if (scanResult.error) {
+      console.error('Failed to log scan:', scanResult.error);
+      // Not returning an error to the user for the same reason
     }
   } catch (err) {
     console.error('Error in scan tracking:', err);
+    // Allow redirect to proceed even if logging fails
   }
 
-  // Redirect to gpai.app
-  return NextResponse.redirect('https://gpai.app', { status: 307 });
+  // Redirect to the destination URL
+  return NextResponse.redirect(qrCode.destination_url, { status: 307 });
 }
