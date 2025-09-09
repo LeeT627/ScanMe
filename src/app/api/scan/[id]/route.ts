@@ -38,6 +38,8 @@ export async function GET(
   const supabase = await createClient();
 
   // Log the scan and increment counter
+  console.log(`[SCAN] Processing QR scan - ID: ${id}, UUID: ${qrUuid}`);
+  
   try {
     // First, increment the scan count for this QR code
     const { error: updateError } = await supabase.rpc('increment_scan_count', {
@@ -45,7 +47,10 @@ export async function GET(
     });
 
     if (updateError) {
-      console.error('Failed to increment scan count:', updateError);
+      console.error('[SCAN ERROR] Failed to increment scan count:', updateError);
+      console.error('[SCAN ERROR] Details:', JSON.stringify(updateError));
+    } else {
+      console.log('[SCAN SUCCESS] Incremented count for:', qrUuid);
     }
 
     // Log the scan details
@@ -66,7 +71,10 @@ export async function GET(
       });
 
     if (scanError) {
-      console.error('Failed to log scan:', scanError);
+      console.error('[SCAN ERROR] Failed to log scan:', scanError);
+      console.error('[SCAN ERROR] Scan details:', JSON.stringify(scanError));
+    } else {
+      console.log('[SCAN SUCCESS] Logged scan for:', qrUuid);
     }
   } catch (err) {
     console.error('Error in scan tracking:', err);
