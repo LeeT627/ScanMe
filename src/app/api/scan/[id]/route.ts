@@ -26,10 +26,10 @@ export async function GET(
 
   // Map friendly IDs to UUIDs
   const qrIdMapping: { [key: string]: string } = {
-    'US_Shirt_logo': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'US_Shirt_logo': '4595b130-654b-43c8-b452-63e5df312e5f',
     'Boston': 'b2c3d4e5-f678-90ab-cdef-123456789012',
     'New_York': 'c3d4e5f6-7890-abcd-ef12-345678901234',
-    'US_Brochure': 'd4e5f678-90ab-cdef-1234-567890123456'
+    'US_Brochure': '1251af31-b4ea-41f6-aa2d-9877f7e5b28a'
   };
 
   const qrUuid = qrIdMapping[id] || id; // Use mapping or assume it's already a UUID
@@ -80,6 +80,31 @@ export async function GET(
     console.error('Error in scan tracking:', err);
   }
 
-  // Redirect to gpai.app
-  return NextResponse.redirect('https://gpai.app', { status: 307 });
+  // Fetch the redirect URL from the qr_codes table
+  try {
+    const { data: qrCode, error } = await supabase
+      .from('qr_codes')
+      .select('destination_url')
+      .eq('id', qrUuid)
+      .single();
+
+    if (error) {
+      console.error('[REDIRECT ERROR] Failed to fetch redirect URL:', error);
+      // Fallback to a default URL if there's an error
+      return NextResponse.redirect('https://gpai.app', { status: 307 });
+    }
+
+    if (qrCode && qrCode.destination_url) {
+      console.log(`[REDIRECT] Redirecting to: ${qrCode.destination_url}`);
+      return NextResponse.redirect(qrCode.destination_url, { status: 307 });
+    } else {
+      console.warn(`[REDIRECT WARN] No destination_url found for QR code: ${qrUuid}. Redirecting to default.`);
+      // Fallback if no URL is found
+      return NextResponse.redirect('https://gpai.app', { status: 307 });
+    }
+  } catch (err) {
+    console.error('Error fetching redirect URL:', err);
+    // Fallback in case of any other error
+    return NextResponse.redirect('https://gpai.app', { status: 307 });
+  }
 }
